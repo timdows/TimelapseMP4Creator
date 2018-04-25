@@ -10,6 +10,8 @@ namespace TimelapseMP4Creator
 {
 	public class Program
 	{
+		const string FinishedPathsLogFile = "finishedPaths.log";
+
 		public static void Main(string[] args)
 		{
 			var config = new ConfigurationBuilder()
@@ -19,17 +21,28 @@ namespace TimelapseMP4Creator
 
 			var appSettings = config.GetSection("AppSettings").Get<AppSettings>();
 
-			CopyFiles(appSettings);
+			var directories = Directory.EnumerateDirectories(appSettings.SourceImageLocation);
+			foreach (var directory in directories)
+			{
+				//var date = Path.GetFileName(directory);
+				var date = "2018-04-19";
+
+				var sourceDirectory = Path.Combine(appSettings.SourceImageLocation, date);
+				var destinationDirectory = Path.Combine(appSettings.LocalImageLocation, date);
+
+				if (IsPathInFinishedFile(sourceDirectory))
+				{
+					continue;
+				}
+
+				GetFilesAndSaveResized(sourceDirectory, destinationDirectory);
+				CreateTimelapseMP4(destinationDirectory);
+				AddPathToFinishedFile(sourceDirectory);
+			}
 		}
 
-		public static void CopyFiles(AppSettings appSettings)
+		public static void GetFilesAndSaveResized(string sourceDirectory, string destinationDirectory)
 		{
-			//var date = DateTime.Today.ToString("yyyy-MM-dd");
-			var date = "2018-04-19";
-
-			var sourceDirectory = Path.Combine(appSettings.SourceImageLocation, date);
-			var destinationDirectory = Path.Combine(appSettings.LocalImageLocation, date);
-
 			// Check if source directory exists
 			if (!Directory.Exists(sourceDirectory))
 			{
@@ -74,6 +87,22 @@ namespace TimelapseMP4Creator
 
 				Console.WriteLine($"Finished copying and resizing file: {fileToCopy.FileName}. File {index}/{filesToCopy.Count}");
 			}
-		} 
+		}
+
+		public static void CreateTimelapseMP4(string localImageDirectory)
+		{
+
+		}
+
+		public static void AddPathToFinishedFile(string path)
+		{
+			File.AppendAllText(FinishedPathsLogFile, $"{path}\r\n");
+		}
+
+		public static bool IsPathInFinishedFile(string path)
+		{
+			var lines = File.ReadAllLines(FinishedPathsLogFile);
+			return lines.Contains(path);
+		}
 	}
 }
