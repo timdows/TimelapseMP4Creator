@@ -299,3 +299,4 @@ __pycache__/
 *.xsd.cs
 /TimelapseMP4Creator/appsettings.json
 /TimelapseMP4Creator/test/*
+TimelapseMP4Creator/Commands.txt

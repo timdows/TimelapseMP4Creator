@@ -24,9 +24,7 @@ namespace TimelapseMP4Creator
 			var directories = Directory.EnumerateDirectories(appSettings.SourceImageLocation);
 			foreach (var directory in directories)
 			{
-				//var date = Path.GetFileName(directory);
-				var date = "2018-04-19";
-
+				var date = Path.GetFileName(directory);
 				var sourceDirectory = Path.Combine(appSettings.SourceImageLocation, date);
 				var destinationDirectory = Path.Combine(appSettings.LocalImageLocation, date);
 
@@ -66,11 +64,12 @@ namespace TimelapseMP4Creator
 			var filesToCopy = Directory.GetFiles(sourceDirectory, "*.jpg")
 				.Select(item => ImageFileDetails.CreateImageFileDetails(item))
 				.ToList();
+			filesToCopy.RemoveAll(item => item == null);
 
 			// Sort the files so that renaming with index is possible
 			filesToCopy = filesToCopy.OrderBy(item => item.DateTimeTaken).ToList();
 
-			Console.WriteLine($"Total files in source directory: {filesToCopy.Count}");
+			Console.WriteLine($"Total files in source directory {sourceDirectory}: {filesToCopy.Count}");
 
 			var index = 0;
 			foreach (var fileToCopy in filesToCopy)
@@ -101,6 +100,11 @@ namespace TimelapseMP4Creator
 
 		public static bool IsPathInFinishedFile(string path)
 		{
+			if (!File.Exists(path))
+			{
+				return false;
+			}
+
 			var lines = File.ReadAllLines(FinishedPathsLogFile);
 			return lines.Contains(path);
 		}

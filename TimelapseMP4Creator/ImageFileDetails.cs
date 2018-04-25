@@ -11,10 +11,18 @@ namespace TimelapseMP4Creator
 		public static ImageFileDetails CreateImageFileDetails(string path)
 		{
 			var fileName = System.IO.Path.GetFileName(path);
-			var dateTimeTaken = DateTime.ParseExact(
+
+			DateTime dateTimeTaken;
+
+			if (!DateTime.TryParseExact(
 				fileName.Replace(".jpg", string.Empty), 
 				"yyyy-MM-dd HHmmss", 
-				System.Globalization.CultureInfo.InvariantCulture);
+				System.Globalization.CultureInfo.InvariantCulture, 
+				System.Globalization.DateTimeStyles.None,
+				out dateTimeTaken))
+			{
+				return null;
+			}
 
 			return new ImageFileDetails
 			{
