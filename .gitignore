@@ -297,3 +297,5 @@ __pycache__/
 *.btm.cs
 *.odx.cs
 *.xsd.cs
+/TimelapseMP4Creator/appsettings.json
+/TimelapseMP4Creator/test/*
