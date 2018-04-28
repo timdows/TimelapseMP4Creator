@@ -21,8 +21,6 @@ namespace TimelapseMP4Creator
 				.AddJsonFile("appsettings.json")
 				.Build();
 
-			CreateTimelapseMP4(string.Empty);
-
 			var appSettings = config.GetSection("AppSettings").Get<AppSettings>();
 
 			var directories = Directory.EnumerateDirectories(appSettings.SourceImageLocation);
@@ -32,19 +30,18 @@ namespace TimelapseMP4Creator
 				var sourceDirectory = Path.Combine(appSettings.SourceImageLocation, date);
 				var destinationDirectory = Path.Combine(appSettings.LocalImageLocation, date);
 
-				if (await IsPathInFinishedFile(sourceDirectory))
-				{
-					continue;
-				}
-
-				GetFilesAndSaveResized(sourceDirectory, destinationDirectory);
-				CreateTimelapseMP4(destinationDirectory);
-				await AddPathToFinishedFile(sourceDirectory);
+				await GetFilesAndSaveResized(sourceDirectory, destinationDirectory);
+				await CreateTimelapseMP4(destinationDirectory, appSettings.MP4OutputDirectory, date);
 			}
 		}
 
-		public static void GetFilesAndSaveResized(string sourceDirectory, string destinationDirectory)
+		public static async Task GetFilesAndSaveResized(string sourceDirectory, string destinationDirectory)
 		{
+			if (await IsPathInFinishedFile(sourceDirectory))
+			{
+				return;
+			}
+
 			// Check if source directory exists
 			if (!Directory.Exists(sourceDirectory))
 			{
@@ -96,18 +93,33 @@ namespace TimelapseMP4Creator
 				var info = $"Finished copying and resizing file: {fileToCopy.FileName}. File {index}/{filesToCopy.Count}. Statistics {downloadTimeInSeconds} - {stopwatch.ElapsedMilliseconds}";
 				Console.WriteLine(info);
 			}
+
+			await AddPathToFinishedFile(sourceDirectory);
 		}
 
-		public static void CreateTimelapseMP4(string localImageDirectory)
+		public static async Task CreateTimelapseMP4(string localImageDirectory, string mp4OutputDirectory, string filename)
 		{
 			if (!IsLinux())
 			{
 				return;
 			}
 
-			string command = $"ffmpeg -framerate 30 -i {localImageDirectory}/image%04d.jpg -c:v libx264 -r 30 {localImageDirectory}/outputfile.mp4";
-			string result = "";
-			using (System.Diagnostics.Process proc = new System.Diagnostics.Process())
+			if (!Directory.Exists(mp4OutputDirectory))
+			{
+				Directory.CreateDirectory(mp4OutputDirectory);
+			}
+
+			var savePath = $"{mp4OutputDirectory}/{filename}.mp4";
+			if (File.Exists(savePath))
+			{
+				return;
+			}
+
+			string command = $"ffmpeg -framerate 30 -i {localImageDirectory}/image_%04d.jpg -c:v libx264 -r 30 {savePath}";
+			Console.WriteLine(command);
+
+			string result = $"command\r\n";
+			using (var proc = new Process())
 			{
 				proc.StartInfo.FileName = "/bin/bash";
 				proc.StartInfo.Arguments = "-c \" " + command + " \"";
@@ -121,6 +133,13 @@ namespace TimelapseMP4Creator
 
 				proc.WaitForExit();
 			}
+
+			await LogCreateOutput(result, filename);
+		}
+
+		public static async Task LogCreateOutput(string result, string filename)
+		{
+			await File.AppendAllTextAsync($"createOutput_{filename}.log", result);
 		}
 
 		public static async Task AddPathToFinishedFile(string path)
