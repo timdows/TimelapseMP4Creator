@@ -5,6 +5,7 @@ using SixLabors.ImageSharp.Processing.Transforms;
 using System;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace TimelapseMP4Creator
 {
@@ -12,7 +13,7 @@ namespace TimelapseMP4Creator
 	{
 		const string FinishedPathsLogFile = "finishedPaths.log";
 
-		public static void Main(string[] args)
+		public static async Task Main(string[] args)
 		{
 			var config = new ConfigurationBuilder()
 				.SetBasePath(Directory.GetCurrentDirectory())
@@ -28,14 +29,14 @@ namespace TimelapseMP4Creator
 				var sourceDirectory = Path.Combine(appSettings.SourceImageLocation, date);
 				var destinationDirectory = Path.Combine(appSettings.LocalImageLocation, date);
 
-				if (IsPathInFinishedFile(sourceDirectory))
+				if (await IsPathInFinishedFile(sourceDirectory))
 				{
 					continue;
 				}
 
 				GetFilesAndSaveResized(sourceDirectory, destinationDirectory);
 				CreateTimelapseMP4(destinationDirectory);
-				AddPathToFinishedFile(sourceDirectory);
+				await AddPathToFinishedFile(sourceDirectory);
 			}
 		}
 
@@ -93,19 +94,19 @@ namespace TimelapseMP4Creator
 
 		}
 
-		public static void AddPathToFinishedFile(string path)
+		public static async Task AddPathToFinishedFile(string path)
 		{
-			File.AppendAllText(FinishedPathsLogFile, $"{path}\r\n");
+			await File.AppendAllTextAsync(FinishedPathsLogFile, $"{path}\r\n");
 		}
 
-		public static bool IsPathInFinishedFile(string path)
+		public static async Task<bool> IsPathInFinishedFile(string path)
 		{
 			if (!File.Exists(path))
 			{
 				return false;
 			}
 
-			var lines = File.ReadAllLines(FinishedPathsLogFile);
+			var lines = await File.ReadAllLinesAsync(FinishedPathsLogFile);
 			return lines.Contains(path);
 		}
 	}
