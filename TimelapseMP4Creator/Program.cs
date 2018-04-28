@@ -3,6 +3,7 @@ using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
 using SixLabors.ImageSharp.Processing.Transforms;
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -19,6 +20,8 @@ namespace TimelapseMP4Creator
 				.SetBasePath(Directory.GetCurrentDirectory())
 				.AddJsonFile("appsettings.json")
 				.Build();
+
+			CreateTimelapseMP4(string.Empty);
 
 			var appSettings = config.GetSection("AppSettings").Get<AppSettings>();
 
@@ -73,25 +76,51 @@ namespace TimelapseMP4Creator
 			Console.WriteLine($"Total files in source directory {sourceDirectory}: {filesToCopy.Count}");
 
 			var index = 0;
+			var stopwatch = Stopwatch.StartNew();
 			foreach (var fileToCopy in filesToCopy)
 			{
+				stopwatch.Restart();
+
 				var localFileName = $"image_{index++.ToString("D4")}.jpg";
 				var destinationPath = Path.Combine(destinationDirectory, localFileName);
+				long downloadTimeInSeconds = 0;
 
 				// Load the image and save a resized version
 				using (var image = Image.Load(fileToCopy.Path))
 				{
+					downloadTimeInSeconds = stopwatch.ElapsedMilliseconds;
 					image.Mutate(x => x.Resize(image.Width / 2, image.Height / 2));
 					image.Save(destinationPath);
 				}
 
-				Console.WriteLine($"Finished copying and resizing file: {fileToCopy.FileName}. File {index}/{filesToCopy.Count}");
+				var info = $"Finished copying and resizing file: {fileToCopy.FileName}. File {index}/{filesToCopy.Count}. Statistics {downloadTimeInSeconds} - {stopwatch.ElapsedMilliseconds}";
+				Console.WriteLine(info);
 			}
 		}
 
 		public static void CreateTimelapseMP4(string localImageDirectory)
 		{
+			if (!IsLinux())
+			{
+				return;
+			}
 
+			string command = $"ffmpeg -framerate 30 -i {localImageDirectory}/image%04d.jpg -c:v libx264 -r 30 {localImageDirectory}/outputfile.mp4";
+			string result = "";
+			using (System.Diagnostics.Process proc = new System.Diagnostics.Process())
+			{
+				proc.StartInfo.FileName = "/bin/bash";
+				proc.StartInfo.Arguments = "-c \" " + command + " \"";
+				proc.StartInfo.UseShellExecute = false;
+				proc.StartInfo.RedirectStandardOutput = true;
+				proc.StartInfo.RedirectStandardError = true;
+				proc.Start();
+
+				result += proc.StandardOutput.ReadToEnd();
+				result += proc.StandardError.ReadToEnd();
+
+				proc.WaitForExit();
+			}
 		}
 
 		public static async Task AddPathToFinishedFile(string path)
@@ -108,6 +137,12 @@ namespace TimelapseMP4Creator
 
 			var lines = await File.ReadAllLinesAsync(FinishedPathsLogFile);
 			return lines.Contains(path);
+		}
+
+		public static bool IsLinux()
+		{
+			int p = (int)Environment.OSVersion.Platform;
+			return (p == 4) || (p == 6) || (p == 128);
 		}
 	}
 }
