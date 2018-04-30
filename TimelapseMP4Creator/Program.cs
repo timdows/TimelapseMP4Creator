@@ -36,7 +36,7 @@ namespace TimelapseMP4Creator
 				var destinationDirectory = Path.Combine(appSettings.LocalImageLocation, date);
 
 				await GetFilesAndSaveResized(sourceDirectory, destinationDirectory);
-				await CreateTimelapseMP4(destinationDirectory, appSettings.MP4OutputDirectory, date);
+				await CreateTimelapseMP4(appSettings, destinationDirectory, date);
 			}
 		}
 
@@ -102,41 +102,66 @@ namespace TimelapseMP4Creator
 			await AddPathToFinishedFile(sourceDirectory);
 		}
 
-		public static async Task CreateTimelapseMP4(string localImageDirectory, string mp4OutputDirectory, string filename)
+		public static async Task CreateTimelapseMP4(AppSettings appSettings, string localImageDirectory, string filename)
 		{
-			if (!IsLinux())
+			if (!Directory.Exists(appSettings.MP4OutputDirectory))
 			{
-				return;
+				Directory.CreateDirectory(appSettings.MP4OutputDirectory);
 			}
 
-			if (!Directory.Exists(mp4OutputDirectory))
-			{
-				Directory.CreateDirectory(mp4OutputDirectory);
-			}
-
-			var savePath = $"{mp4OutputDirectory}/{filename}.mp4";
+			var savePath = $"{appSettings.MP4OutputDirectory}/{filename}.mp4";
 			if (File.Exists(savePath))
 			{
 				return;
 			}
 
-			string command = $"ffmpeg -framerate 30 -i {localImageDirectory}/image_%04d.jpg -c:v libx264 -r 30 {savePath}";
-			Console.WriteLine(command);
-
-			string result = $"command\r\n";
-			using (var proc = new Process())
+			if (!Directory.EnumerateFiles(localImageDirectory, "*.jpg").Any())
 			{
-				proc.StartInfo.FileName = "/bin/bash";
-				proc.StartInfo.Arguments = "-c \" " + command + " \"";
-				proc.StartInfo.UseShellExecute = false;
-				proc.StartInfo.RedirectStandardOutput = true;
-				proc.StartInfo.RedirectStandardError = true;
-				proc.Start();
+				return;
+			}
 
-				result += proc.StandardOutput.ReadToEnd();
-				result += proc.StandardError.ReadToEnd();
+			var result = string.Empty;
+			if (IsLinux())
+			{
+				string command = $"ffmpeg -framerate 30 -i {localImageDirectory}/image_%04d.jpg -c:v libx264 -r 30 {savePath}";
+				Console.WriteLine(command);
 
-				proc.WaitForExit();
+				result = $"{command}\r\n";
+				using (var proc = new Process())
+				{
+					proc.StartInfo.FileName = "/bin/bash";
+					proc.StartInfo.Arguments = "-c \" " + command + " \"";
+					proc.StartInfo.UseShellExecute = false;
+					proc.StartInfo.RedirectStandardOutput = true;
+					proc.StartInfo.RedirectStandardError = true;
+					proc.Start();
+
+					result += proc.StandardOutput.ReadToEnd();
+					result += proc.StandardError.ReadToEnd();
+
+					proc.WaitForExit();
+				}
+			}
+			else
+			{
+				string command = $"\"{appSettings.WindowsFfmpegLocation}\" -framerate 30 -i {localImageDirectory}/image_%04d.jpg -c:v libx264 -r 30 {savePath}";
+				Console.WriteLine(command);
+
+				result = $"{command}\r\n";
+				using (var proc = new Process())
+				{
+					proc.StartInfo.FileName = "cmd.exe";
+					proc.StartInfo.Arguments = "/C " + command;
+					proc.StartInfo.UseShellExecute = false;
+					proc.StartInfo.RedirectStandardOutput = true;
+					proc.StartInfo.RedirectStandardError = true;
+					proc.Start();
+
+					result += proc.StandardOutput.ReadToEnd();
+					result += proc.StandardError.ReadToEnd();
+
+					proc.WaitForExit();
+				}
 			}
 
 			await LogCreateOutput(result, filename);
