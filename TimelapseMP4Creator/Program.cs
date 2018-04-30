@@ -44,6 +44,7 @@ namespace TimelapseMP4Creator
 		{
 			if (await IsPathInFinishedFile(sourceDirectory))
 			{
+				Console.WriteLine($"Skipping copy files and resize for directory {sourceDirectory}");
 				return;
 			}
 
@@ -112,11 +113,13 @@ namespace TimelapseMP4Creator
 			var savePath = $"{appSettings.MP4OutputDirectory}/{filename}.mp4";
 			if (File.Exists(savePath))
 			{
+				Console.WriteLine($"Movie already exists for savePath {savePath}");
 				return;
 			}
 
 			if (!Directory.EnumerateFiles(localImageDirectory, "*.jpg").Any())
 			{
+				Console.WriteLine($"No files to create movei in {localImageDirectory}");
 				return;
 			}
 
@@ -179,7 +182,7 @@ namespace TimelapseMP4Creator
 
 		public static async Task<bool> IsPathInFinishedFile(string path)
 		{
-			if (!File.Exists(path))
+			if (!File.Exists(FinishedPathsLogFile))
 			{
 				return false;
 			}
