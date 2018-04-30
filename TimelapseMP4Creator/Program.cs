@@ -27,6 +27,11 @@ namespace TimelapseMP4Creator
 			foreach (var directory in directories)
 			{
 				var date = Path.GetFileName(directory);
+				if (date.Equals(DateTime.Today.ToString("yyyy-MM-dd"), StringComparison.CurrentCultureIgnoreCase))
+				{
+					continue;
+				}
+				
 				var sourceDirectory = Path.Combine(appSettings.SourceImageLocation, date);
 				var destinationDirectory = Path.Combine(appSettings.LocalImageLocation, date);
 
