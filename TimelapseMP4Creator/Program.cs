@@ -178,6 +178,48 @@ namespace TimelapseMP4Creator
 				.Select(item => ImageFileDetails.CreateImageFromEpochFile(item))
 				.ToList();
 			filesToCopy.RemoveAll(item => item == null);
+
+			// Sort the files so that renaming with index is possible
+			filesToCopy = filesToCopy.OrderBy(item => item.DateTimeTaken).ToList();
+
+			Console.WriteLine($"Total files in directory {appSettings.UnsortedImagesDirectory}: {filesToCopy.Count}");
+
+			var index = 0;
+			var stopwatch = Stopwatch.StartNew();
+			foreach (var fileToCopy in filesToCopy)
+			{
+				stopwatch.Restart();
+
+				// Create destinationDirectory if needed and reset index (files are sorted)
+				var destinationDirectory = Path.Combine(appSettings.LocalImageLocation, fileToCopy.DateTimeTaken.ToString("yyyy-MM-dd"));
+				if (!Directory.Exists(destinationDirectory))
+				{
+					Directory.CreateDirectory(destinationDirectory);
+					index = 0;
+				}
+
+				var localFileName = $"image_{index++.ToString("D4")}.jpg";
+				var destinationPath = Path.Combine(destinationDirectory, localFileName);
+				long downloadTimeInSeconds = 0;
+
+				try
+				{
+					// Load the image and save a resized version
+					using (var image = Image.Load(fileToCopy.Path))
+					{
+						downloadTimeInSeconds = stopwatch.ElapsedMilliseconds;
+						image.Mutate(x => x.Resize(image.Width / 2, image.Height / 2));
+						image.Save(destinationPath);
+					}
+
+					var info = $"Finished copying and resizing file: {fileToCopy.FileName} date {fileToCopy.DateTimeTaken.ToString("yyyy-MM-dd HH:mm:ss")}. File {index}/{filesToCopy.Count}. Statistics {downloadTimeInSeconds} - {stopwatch.ElapsedMilliseconds}";
+					Console.WriteLine(info);
+				}
+				catch (Exception excep)
+				{
+					// Oops, 0 kb file?
+				}
+			}
 		}
 
 		public static async Task LogCreateOutput(string result, string filename)
