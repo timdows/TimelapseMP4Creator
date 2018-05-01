@@ -23,6 +23,8 @@ namespace TimelapseMP4Creator
 
 			var appSettings = config.GetSection("AppSettings").Get<AppSettings>();
 
+			await UnsortedFiles(appSettings);
+
 			var directories = Directory.EnumerateDirectories(appSettings.SourceImageLocation);
 			foreach (var directory in directories)
 			{
@@ -119,7 +121,7 @@ namespace TimelapseMP4Creator
 
 			if (!Directory.EnumerateFiles(localImageDirectory, "*.jpg").Any())
 			{
-				Console.WriteLine($"No files to create movei in {localImageDirectory}");
+				Console.WriteLine($"No files to create movie in directory {localImageDirectory}");
 				return;
 			}
 
@@ -168,6 +170,14 @@ namespace TimelapseMP4Creator
 			}
 
 			await LogCreateOutput(result, filename);
+		}
+
+		public static async Task UnsortedFiles(AppSettings appSettings)
+		{
+			var filesToCopy = Directory.GetFiles(appSettings.UnsortedImagesDirectory, "*.jpg", SearchOption.AllDirectories)
+				.Select(item => ImageFileDetails.CreateImageFromEpochFile(item))
+				.ToList();
+			filesToCopy.RemoveAll(item => item == null);
 		}
 
 		public static async Task LogCreateOutput(string result, string filename)

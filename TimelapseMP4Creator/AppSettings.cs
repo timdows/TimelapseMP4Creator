@@ -6,5 +6,6 @@
 		public string LocalImageLocation { get; set; }
 		public string WindowsFfmpegLocation { get; set; }
 		public string MP4OutputDirectory { get; set; }
+		public string UnsortedImagesDirectory { get; set; }
 	}
 }

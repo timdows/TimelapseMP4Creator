@@ -31,5 +31,28 @@ namespace TimelapseMP4Creator
 				DateTimeTaken = dateTimeTaken
 			};
 		}
+
+		public static ImageFileDetails CreateImageFromEpochFile(string path)
+		{
+			var fileName = System.IO.Path.GetFileName(path);
+			DateTimeOffset dateTimeOffset;
+			if (int.TryParse(fileName.Replace(".jpg", string.Empty), out var offset))
+			{
+				dateTimeOffset = DateTimeOffset.FromUnixTimeSeconds(offset);
+			}
+			else
+			{
+				return null;
+			}
+			
+			DateTime dateTimeTaken = dateTimeOffset.UtcDateTime;
+
+			return new ImageFileDetails
+			{
+				Path = path,
+				FileName = fileName,
+				DateTimeTaken = dateTimeTaken
+			};
+		}
 	}
 }
