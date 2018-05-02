@@ -182,10 +182,24 @@ namespace TimelapseMP4Creator
 			// Sort the files so that renaming with index is possible
 			filesToCopy = filesToCopy.OrderBy(item => item.DateTimeTaken).ToList();
 
+			var finishedDates = Directory.GetDirectories(appSettings.LocalImageLocation)
+				.Select(item => {
+					DateTime.TryParseExact(
+						Path.GetFileName(item),
+						"yyyy-MM-dd",
+						System.Globalization.CultureInfo.InvariantCulture,
+						System.Globalization.DateTimeStyles.None, out var parsedDate);
+					return parsedDate;
+				})
+				.ToList();
+			filesToCopy.RemoveAll(item => finishedDates.Contains(item.DateTimeTaken.Date));
+
 			Console.WriteLine($"Total files in directory {appSettings.UnsortedImagesDirectory}: {filesToCopy.Count}");
 
 			var index = 0;
+			var overallIndex = 0;
 			var stopwatch = Stopwatch.StartNew();
+
 			foreach (var fileToCopy in filesToCopy)
 			{
 				stopwatch.Restart();
@@ -201,7 +215,6 @@ namespace TimelapseMP4Creator
 				var localFileName = $"image_{index++.ToString("D4")}.jpg";
 				var destinationPath = Path.Combine(destinationDirectory, localFileName);
 				long downloadTimeInSeconds = 0;
-
 				try
 				{
 					// Load the image and save a resized version
@@ -212,7 +225,9 @@ namespace TimelapseMP4Creator
 						image.Save(destinationPath);
 					}
 
-					var info = $"Finished copying and resizing file: {fileToCopy.FileName} date {fileToCopy.DateTimeTaken.ToString("yyyy-MM-dd HH:mm:ss")}. File {index}/{filesToCopy.Count}. Statistics {downloadTimeInSeconds} - {stopwatch.ElapsedMilliseconds}";
+					var info = $"Finished copying and resizing file: {fileToCopy.FileName} date {fileToCopy.DateTimeTaken.ToString("yyyy-MM-dd HH:mm:ss")}. " +
+						$"File {overallIndex++}/{filesToCopy.Count}. " +
+						$"Statistics {downloadTimeInSeconds} - {stopwatch.ElapsedMilliseconds}";
 					Console.WriteLine(info);
 				}
 				catch (Exception excep)
