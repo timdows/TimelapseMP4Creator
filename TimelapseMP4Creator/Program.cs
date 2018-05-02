@@ -125,6 +125,7 @@ namespace TimelapseMP4Creator
 				return;
 			}
 
+			var stopwatch = Stopwatch.StartNew();
 			var result = string.Empty;
 			if (IsLinux())
 			{
@@ -169,6 +170,9 @@ namespace TimelapseMP4Creator
 				}
 			}
 
+			var elapsedMillis = stopwatch.ElapsedMilliseconds;
+			Console.WriteLine($"Finished creating movie in {elapsedMillis} ms");
+			result += $"\r\nelapsedMillis: {elapsedMillis}\r\n";
 			await LogCreateOutput(result, filename);
 		}
 
