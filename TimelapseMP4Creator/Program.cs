@@ -23,7 +23,7 @@ namespace TimelapseMP4Creator
 
 			var appSettings = config.GetSection("AppSettings").Get<AppSettings>();
 
-			await UnsortedFiles(appSettings);
+			//UnsortedFiles(appSettings);
 
 			var directories = Directory.EnumerateDirectories(appSettings.SourceImageLocation);
 			foreach (var directory in directories)
@@ -33,7 +33,7 @@ namespace TimelapseMP4Creator
 				{
 					continue;
 				}
-				
+
 				var sourceDirectory = Path.Combine(appSettings.SourceImageLocation, date);
 				var destinationDirectory = Path.Combine(appSettings.LocalImageLocation, date);
 
@@ -176,12 +176,13 @@ namespace TimelapseMP4Creator
 			await LogCreateOutput(result, filename);
 		}
 
-		public static async Task UnsortedFiles(AppSettings appSettings)
+		public static void UnsortedFiles(AppSettings appSettings)
 		{
 			var filesToCopy = Directory.GetFiles(appSettings.UnsortedImagesDirectory, "*.jpg", SearchOption.AllDirectories)
 				.Select(item => ImageFileDetails.CreateImageFromEpochFile(item))
 				.ToList();
 			filesToCopy.RemoveAll(item => item == null);
+			filesToCopy = filesToCopy.Distinct().ToList();
 
 			// Sort the files so that renaming with index is possible
 			filesToCopy = filesToCopy.OrderBy(item => item.DateTimeTaken).ToList();
