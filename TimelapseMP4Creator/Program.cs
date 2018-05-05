@@ -24,6 +24,7 @@ namespace TimelapseMP4Creator
 			var appSettings = config.GetSection("AppSettings").Get<AppSettings>();
 
 			//UnsortedFiles(appSettings);
+			//await CreateTimelapseMP4FromUnsortedFiles(appSettings);
 
 			var directories = Directory.EnumerateDirectories(appSettings.SourceImageLocation);
 			foreach (var directory in directories)
@@ -112,7 +113,7 @@ namespace TimelapseMP4Creator
 				Directory.CreateDirectory(appSettings.MP4OutputDirectory);
 			}
 
-			var savePath = $"{appSettings.MP4OutputDirectory}/{filename}.mp4";
+			var savePath = $"{appSettings.MP4OutputDirectory}\\{filename}.mp4";
 			if (File.Exists(savePath))
 			{
 				Console.WriteLine($"Movie already exists for savePath {savePath}");
@@ -150,24 +151,26 @@ namespace TimelapseMP4Creator
 			}
 			else
 			{
-				string command = $"\"{appSettings.WindowsFfmpegLocation}\" -framerate 30 -i {localImageDirectory}/image_%04d.jpg -c:v libx264 -r 30 {savePath}";
+				string command = $"\"{appSettings.WindowsFfmpegLocation}\" -framerate 30 -i {localImageDirectory}\\image_%04d.jpg -c:v libx264 -r 30 {savePath}";
 				Console.WriteLine(command);
+				await File.AppendAllTextAsync($"windowsCommands.log", $"{command}\r\n");
 
 				result = $"{command}\r\n";
-				using (var proc = new Process())
-				{
-					proc.StartInfo.FileName = "cmd.exe";
-					proc.StartInfo.Arguments = "/C " + command;
-					proc.StartInfo.UseShellExecute = false;
-					proc.StartInfo.RedirectStandardOutput = true;
-					proc.StartInfo.RedirectStandardError = true;
-					proc.Start();
+				//using (var proc = new Process())
+				//{
+				//	proc.StartInfo.FileName = "cmd.exe";
+				//	proc.StartInfo.Arguments = "/C " + command;
+				//	proc.StartInfo.UseShellExecute = false;
+				//	proc.StartInfo.RedirectStandardOutput = true;
+				//	proc.StartInfo.RedirectStandardError = true;
 
-					result += proc.StandardOutput.ReadToEnd();
-					result += proc.StandardError.ReadToEnd();
+				//	proc.Start();
 
-					proc.WaitForExit();
-				}
+				//	result += proc.StandardOutput.ReadToEnd();
+				//	result += proc.StandardError.ReadToEnd();
+
+				//	proc.WaitForExit();
+				//}
 			}
 
 			var elapsedMillis = stopwatch.ElapsedMilliseconds;
@@ -237,8 +240,19 @@ namespace TimelapseMP4Creator
 				}
 				catch (Exception excep)
 				{
+					index--;
 					// Oops, 0 kb file?
 				}
+			}
+		}
+
+		public static async Task CreateTimelapseMP4FromUnsortedFiles(AppSettings appSettings)
+		{
+			var sources = Directory.EnumerateDirectories(appSettings.LocalImageLocation);
+			foreach (var source in sources)
+			{
+				var date = Path.GetFileName(source);
+				await CreateTimelapseMP4(appSettings, source, date);
 			}
 		}
 
