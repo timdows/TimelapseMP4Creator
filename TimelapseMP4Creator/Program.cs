@@ -16,6 +16,16 @@ namespace TimelapseMP4Creator
 
 		public static async Task Main(string[] args)
 		{
+			while (true)
+			{
+				await Task.WhenAll(
+					Run(),
+					Task.Delay(60 * 60 * 1000));
+			}
+		}
+
+		public static async Task Run()
+		{
 			var config = new ConfigurationBuilder()
 				.SetBasePath(Directory.GetCurrentDirectory())
 				.AddJsonFile("appsettings.json")
@@ -39,7 +49,7 @@ namespace TimelapseMP4Creator
 				var destinationDirectory = Path.Combine(appSettings.LocalImageLocation, date);
 
 				await GetFilesAndSaveResized(sourceDirectory, destinationDirectory);
-				await CreateTimelapseMP4(appSettings, destinationDirectory, date);
+				//await CreateTimelapseMP4(appSettings, destinationDirectory, date);
 			}
 		}
 
