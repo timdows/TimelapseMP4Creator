@@ -16,6 +16,8 @@ namespace TimelapseMP4Creator
 
 		public static async Task Main(string[] args)
 		{
+			Get1400HourFiles();
+
 			while (true)
 			{
 				await Task.WhenAll(
@@ -187,6 +189,41 @@ namespace TimelapseMP4Creator
 			Console.WriteLine($"Finished creating movie in {elapsedMillis} ms");
 			result += $"\r\nelapsedMillis: {elapsedMillis}\r\n";
 			await LogCreateOutput(result, filename);
+		}
+
+		public static void Get1400HourFiles()
+		{
+			var saveDir = "1400HourFiles";
+			if (!Directory.Exists(saveDir))
+			{
+				Directory.CreateDirectory(saveDir);
+			}
+
+			var fileGroup = Directory.GetFiles(@"\\192.168.1.14\projects\VWP Timelapse\timelapse", "*.jpg", SearchOption.AllDirectories)
+				.Select(item => ImageFileDetails.CreateImageFromEpochFile(item))
+				.GroupBy(item => item.DateTimeTaken.Date)
+				.ToList();
+
+			foreach (var files in fileGroup)
+			{
+				var firstAfter1400 = files
+					.OrderBy(item => item.DateTimeTaken)
+					.FirstOrDefault(item => item.DateTimeTaken.Hour >= 14);
+
+				if (firstAfter1400 == null)
+				{
+					firstAfter1400 = files
+					.OrderByDescending(item => item.DateTimeTaken)
+					.FirstOrDefault(item => item.DateTimeTaken.Hour < 14);
+				}
+
+				if (firstAfter1400 == null)
+				{
+					continue;
+				}
+
+				File.Copy(firstAfter1400.Path, $"{saveDir}\\{firstAfter1400.DateTimeTaken.ToString("yyyy-MM-ddTHHmmss")}.jpg");
+			}
 		}
 
 		public static void UnsortedFiles(AppSettings appSettings)
