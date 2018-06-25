@@ -199,30 +199,69 @@ namespace TimelapseMP4Creator
 				Directory.CreateDirectory(saveDir);
 			}
 
-			var fileGroup = Directory.GetFiles(@"\\192.168.1.14\projects\VWP Timelapse\timelapse", "*.jpg", SearchOption.AllDirectories)
-				.Select(item => ImageFileDetails.CreateImageFromEpochFile(item))
+			var fileGroup = Directory.GetFiles(@"\\192.168.1.14\projects\VWP Timelapse\timelapse construction", "*.jpg", SearchOption.AllDirectories)
+				.Select(item => ImageFileDetails.CreateImageFileDetails(item))
+				.Where(item => item != null)
 				.GroupBy(item => item.DateTimeTaken.Date)
 				.ToList();
 
 			foreach (var files in fileGroup)
 			{
-				var firstAfter1400 = files
+				var fileAfter = files
 					.OrderBy(item => item.DateTimeTaken)
 					.FirstOrDefault(item => item.DateTimeTaken.Hour >= 14);
 
-				if (firstAfter1400 == null)
-				{
-					firstAfter1400 = files
+				var fileBefore = files
 					.OrderByDescending(item => item.DateTimeTaken)
 					.FirstOrDefault(item => item.DateTimeTaken.Hour < 14);
+
+				ImageFileDetails saveFile = null;
+				if ((fileAfter?.DateTimeTaken.Hour ?? 23) - 14 <= 14 - (fileBefore?.DateTimeTaken.Hour ?? 0))
+				{
+					saveFile = fileAfter;
 				}
 
-				if (firstAfter1400 == null)
+				if ((fileAfter?.DateTimeTaken.Hour ?? 23) - 14 >= 14 - (fileBefore?.DateTimeTaken.Hour ?? 0))
+				{
+					saveFile = fileBefore;
+				}
+
+				if (saveFile == null && fileBefore != null)
+				{
+					saveFile = fileBefore;
+				}
+
+				if (saveFile == null)
 				{
 					continue;
 				}
+				else
+				{
+					try
+					{
+						// Load the image and save a resized version
+						using (var image = Image.Load(saveFile.Path))
+						{
+							image.Mutate(x => x.Resize(image.Width / 2, image.Height / 2));
+							image.Save($"{saveDir}\\{saveFile.DateTimeTaken.ToString("yyyy-MM-ddTHHmmss")}.jpg");
+						}
 
-				File.Copy(firstAfter1400.Path, $"{saveDir}\\{firstAfter1400.DateTimeTaken.ToString("yyyy-MM-ddTHHmmss")}.jpg");
+						// Load the image and save a thumbnail
+						using (var image = Image.Load(saveFile.Path))
+						{
+							var height = 200;
+							decimal widthRatio = image.Height / height;
+							int width = (int)Math.Round(image.Width / widthRatio, 0);
+							image.Mutate(x => x.Resize(width, height));
+							image.Save($"{saveDir}\\{saveFile.DateTimeTaken.ToString("yyyy-MM-ddTHHmmss")}_thumb.jpg");
+						}
+					}
+					catch (Exception excep)
+					{
+						var a = excep.Message;
+					}
+					
+				}
 			}
 		}
 

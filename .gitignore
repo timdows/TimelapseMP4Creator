@@ -300,3 +300,4 @@ __pycache__/
 /TimelapseMP4Creator/appsettings.json
 /TimelapseMP4Creator/test/*
 TimelapseMP4Creator/Commands.txt
+/TimelapseMP4Creator/output
